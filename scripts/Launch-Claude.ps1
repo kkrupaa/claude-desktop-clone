@@ -57,6 +57,15 @@ if (-not $exe) {
         Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
 }
 
+# 3) Fallback: non-MSIX (Squirrel) install from claude.ai/download, which lives at
+#    %LOCALAPPDATA%\AnthropicClaude\app-<version>\claude.exe. Pick the newest
+#    version folder (compare as [version], not as strings: 4.4212 > 4.29).
+if (-not $exe) {
+    $exe = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'AnthropicClaude\app-*\claude.exe') -ErrorAction SilentlyContinue |
+        Sort-Object { [version]($_.Directory.Name -replace '^app-', '') } -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
+}
+
 if (-not $exe -or -not (Test-Path $exe)) {
     Show-Error "Claude Desktop app was not found.`n`nInstall it from the Microsoft Store / claude.ai/download first, then run again."
     exit 1
