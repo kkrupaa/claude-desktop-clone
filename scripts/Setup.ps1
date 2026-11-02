@@ -131,11 +131,19 @@ public static extern bool DestroyIcon(IntPtr hIcon);
 # --- Verify the Claude Desktop app is installed and find its icon ---------
 $pkg = Get-AppxPackage -Name '*Claude*' -ErrorAction SilentlyContinue |
     Sort-Object Version -Descending | Select-Object -First 1
-if (-not $pkg) {
-    throw "Claude Desktop app not found. Install it from https://claude.ai/download (or the Microsoft Store) first."
+if ($pkg) {
+    $iconExe = Join-Path $pkg.InstallLocation 'app\Claude.exe'
+    Write-Host "Found Claude $($pkg.Version) at $($pkg.InstallLocation)" -ForegroundColor Green
+} else {
+    # Fallback: non-MSIX (Squirrel) install under %LOCALAPPDATA%\AnthropicClaude.
+    $iconExe = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'AnthropicClaude\app-*\claude.exe') -ErrorAction SilentlyContinue |
+        Sort-Object { [version]($_.Directory.Name -replace '^app-', '') } -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $iconExe) {
+        throw "Claude Desktop app not found. Install it from https://claude.ai/download (or the Microsoft Store) first."
+    }
+    Write-Host "Found Claude (Squirrel install) at $iconExe" -ForegroundColor Green
 }
-$iconExe = Join-Path $pkg.InstallLocation 'app\Claude.exe'
-Write-Host "Found Claude $($pkg.Version) at $($pkg.InstallLocation)" -ForegroundColor Green
 
 # --- Copy launcher scripts to a stable location ---------------------------
 $binDir = Join-Path $InstallDir 'bin'
